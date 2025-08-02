@@ -1,8 +1,8 @@
-name: Update otrkey files every 15 min
+name: Update otrkey files every 30 min
 
 on:
   schedule:
-    - cron: '*/15 * * * *' # every 15 minutes
+    - cron: '*/30 * * * *' # every 30 minutes
   workflow_dispatch:
 
 permissions:
