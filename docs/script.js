@@ -62,7 +62,8 @@
 
         await new Promise((r) => setTimeout(r, 0));
 
-        const filtered = files.filter(({ file_name }) =>
+        const filtered = files.filter(({ parsed, file_name }) =>
+            (parsed && normalize(parsed.title).includes(term)) ||
             normalize(file_name).includes(term)
         );
 
