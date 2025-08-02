@@ -1,0 +1,42 @@
+[
+    {
+        "name": "peters-mirror.de",
+        "list_url": "https://peters-mirror.de/data/otrkeys.lst",
+        "search_url": "https://peters-mirror.de/?file={query}"
+    },
+    {
+        "name": "juwelier-shop24.net",
+        "list_url": "https://juwelier-shop24.net/mirror/",
+        "search_url": "https://juwelier-shop24.net/mirror/?file={query}"
+    },
+    {
+        "name": "simple-otr-mirror.de",
+        "list_url": "https://simple-otr-mirror.de/",
+        "search_url": "https://simple-otr-mirror.de/?file={query}"
+    },
+    {
+        "name": "simple-otr-mirror-low-quality.de",
+        "list_url": "https://simple-otr-mirror-low-quality.de/",
+        "search_url": "https://simple-otr-mirror-low-quality.de/?file={query}"
+    },
+    {
+        "name": "otr-files.de",
+        "list_url": "https://www.otr-files.de/index.php?option=com_include&Itemid=63&seite=all",
+        "search_url": "https://www.otr-files.de/?file={query}"
+    },
+    {
+        "name": "otr-files.de",
+        "list_url": "https://www.otr-files.de/index.php?option=com_include&Itemid=64&seite=all",
+        "search_url": "https://www.otr-files.de/?file={query}"
+    },
+    {
+        "name": "otr-files.de",
+        "list_url": "https://www.otr-files.de/index.php?option=com_include&Itemid=31&seite=all",
+        "search_url": "https://www.otr-files.de/?file={query}"
+    },
+    {
+        "name": "datenkeller.net",
+        "list_url": "https://otr.datenkeller.net/filmindex",
+        "search_url": "https://otr.datenkeller.net/?file={query}"
+    }
+]
