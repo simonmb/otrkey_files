@@ -38,5 +38,15 @@
         "name": "datenkeller.net",
         "list_url": "https://otr.datenkeller.net/filmindex",
         "search_url": "https://otr.datenkeller.net/?file={query}"
+    },
+    {
+        "name": "otr-lab.net",
+        "list_url": "https://otr-lab.net/otrkeyfinder.txt",
+        "search_url": "https://otr-lab.net/?file={query}"
+    },
+    {
+        "name": "otr-lab.net",
+        "list_url": "https://otr-lab.net/archiv/archiv.txt",
+        "search_url": "https://otr-lab.net/archiv/?file={query}"
     }
 ]
