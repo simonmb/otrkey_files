@@ -56,7 +56,7 @@ def extract_otrkeys(text):
 
 def fetch_list_text(url):
     try:
-        response = requests.get(url, headers=HEADERS, timeout=60)
+        response = requests.get(url, headers=HEADERS, timeout=15)
         response.raise_for_status()
         return extract_otrkeys(response.text)
     except Exception as e:
