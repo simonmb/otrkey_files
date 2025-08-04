@@ -1,7 +1,9 @@
 import requests
 import csv
 import json
+import os
 import re
+import urllib3
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -54,9 +56,18 @@ def extract_otrkeys(text):
     return list(set(OTRKEY_REGEX.findall(text)))
 
 
-def fetch_list_text(url):
+def fetch_list_text(url, proxy):
     try:
-        response = requests.get(url, headers=HEADERS, timeout=15)
+        if proxy == "PROXY1":
+            payload = {"api_key": os.getenv("API_KEY"), "url": url}
+            response = requests.get(
+                "https://api.scraperapi.com/",
+                headers=HEADERS,
+                timeout=15,
+                params=payload,
+            )
+        else:
+            response = requests.get(url, headers=HEADERS, timeout=15)
         response.raise_for_status()
         return extract_otrkeys(response.text)
     except Exception as e:
@@ -65,7 +76,7 @@ def fetch_list_text(url):
 
 
 def fetch_files_for_mirror(mirror):
-    files = fetch_list_text(mirror["list_url"])
+    files = fetch_list_text(mirror["list_url"], mirror["proxy"])
     files = list(sorted(set(files)))
 
     print(f"[OK] {mirror['name']}: {len(files)} files found from {mirror['list_url']}")
