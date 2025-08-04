@@ -1,9 +1,9 @@
-import requests
 import csv
 import json
 import os
 import re
-import urllib3
+import random
+import requests
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -57,8 +57,10 @@ def extract_otrkeys(text):
 
 
 def fetch_list_text(url, proxy):
-    try:
-        if proxy == "PROXY1":
+    if proxy == "PROXY1":
+        # free tier is limited to 1000 requests/month
+        # this ensures to stay below that with 99% confidence.
+        if random.random() < 0.3188:
             payload = {"api_key": os.getenv("API_KEY"), "url": url}
             response = requests.get(
                 "https://api.scraperapi.com/",
@@ -67,27 +69,51 @@ def fetch_list_text(url, proxy):
                 params=payload,
             )
         else:
-            response = requests.get(url, headers=HEADERS, timeout=15)
-        response.raise_for_status()
-        return extract_otrkeys(response.text)
+            raise ValueError("Execution was skipped to stay below limit for free tier.")
+    else:
+        response = requests.get(url, headers=HEADERS, timeout=15)
+    response.raise_for_status()
+    return extract_otrkeys(response.text)
+
+
+def fetch_files_for_mirror(mirror, fallback_entries):
+    try:
+        files = fetch_list_text(mirror["list_url"], mirror["proxy"])
+        files = list(sorted(set(files)))
+        if files:
+            print(
+                f"[OK] {mirror['name']}: {len(files)} files found from {mirror['list_url']}"
+            )
+            return [{"mirror_name": mirror["name"], "file_name": f} for f in files]
+        else:
+            raise ValueError("No files found from server response")
     except Exception as e:
-        print(f"[ERROR] Fetching {url}: {e}")
-        return []
+        print(f"[FALLBACK] Using cached entries for {mirror['name']}: {e}")
+        cached = fallback_entries.get(mirror["name"], [])
+        return [{"mirror_name": mirror["name"], "file_name": f} for f in cached]
 
 
-def fetch_files_for_mirror(mirror):
-    files = fetch_list_text(mirror["list_url"], mirror["proxy"])
-    files = list(sorted(set(files)))
-
-    print(f"[OK] {mirror['name']}: {len(files)} files found from {mirror['list_url']}")
-    return [{"mirror_name": mirror["name"], "file_name": f} for f in files]
+def load_existing_entries():
+    fallback = {}
+    try:
+        with open("otrkey_files.csv", "r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                fallback.setdefault(row["mirror_name"], []).append(row["file_name"])
+    except FileNotFoundError:
+        print("⚠️  No existing CSV found. Will not use fallback.")
+    return fallback
 
 
 def main():
     print("Gather OTR mirror list...")
+    fallback_entries = load_existing_entries()
     results = []
     with ThreadPoolExecutor(max_workers=8) as executor:
-        futures = [executor.submit(fetch_files_for_mirror, m) for m in MIRRORS]
+        futures = [
+            executor.submit(fetch_files_for_mirror, m, fallback_entries)
+            for m in MIRRORS
+        ]
         for future in futures:
             results.extend(future.result())
 
