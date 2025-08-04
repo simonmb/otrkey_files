@@ -60,6 +60,12 @@ jobs:
           REPO: ${{ github.repository }}
           PAT: ${{ secrets.PERSONAL_TOKEN }}
         run: |
-          git remote set-url origin https://x-access-token:${PAT}@github.com/${REPO}.git
-          # Force-push the rewritten history (tags not pushed)
-          git push --force --no-tags origin HEAD:main
+          URL="https://x-access-token:${PAT}@github.com/${REPO}.git"
+          if git remote | grep -q '^origin$'; then
+            git remote set-url origin "$URL"
+          else
+            git remote add origin "$URL"
+          fi
+          # Push to the current branch (works on main or others)
+          CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+          git push --force --no-tags origin "HEAD:${CURRENT_BRANCH}"
