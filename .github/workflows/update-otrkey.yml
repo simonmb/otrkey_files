@@ -2,11 +2,11 @@ name: Update otrkey files every 30 min
 
 on:
   schedule:
-    - cron: '*/30 * * * *' # every 30 minutes
+    - cron: '*/30 * * * *'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write  # Needed for creating/updating releases
 
 jobs:
   update:
@@ -16,8 +16,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -30,10 +28,12 @@ jobs:
       - name: Run OTRKey fetch script
         run: python download_otrkey_files.py
 
-      - name: Commit updated CSV
-        uses: EndBug/add-and-commit@v9
+      - name: Create or update GitHub release and upload CSV
+        uses: softprops/action-gh-release@v1
         with:
-          add: 'otrkey_files.csv'
-          message: '⬇️ Update otrkey_files.csv'
-          author_name: 'GitHub Actions'
-          author_email: 'actions@github.com'
+          tag_name: latest
+          name: Latest OTRKey Files
+          files: otrkey_files.csv
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
