@@ -40,18 +40,19 @@ jobs:
           curl -sSL https://raw.githubusercontent.com/newren/git-filter-repo/main/git-filter-repo > /usr/local/bin/git-filter-repo
           chmod +x /usr/local/bin/git-filter-repo
 
-      - name: Remove ALL history of otrkey_files.csv (keep code history)
-        run: |
-          # This rewrites history to remove the CSV from ALL past commits.
-          # After this step, the file will not exist in the working tree.
-          git-filter-repo --path otrkey_files.csv --invert-paths
-
-      - name: Run OTRKey fetch script to produce fresh CSV
+      - name: Run OTRKey fetch script (write to temp)
         run: |
           python download_otrkey_files.py
+          # Keep a copy OUTSIDE the repo before rewriting history
+          cp otrkey_files.csv /tmp/otrkey_files.new.csv
 
-      - name: Commit latest CSV only
+      - name: Remove ALL history of otrkey_files.csv (keep code history)
         run: |
+          git-filter-repo --force --path otrkey_files.csv --invert-paths
+
+      - name: Restore fresh CSV and commit
+        run: |
+          cp /tmp/otrkey_files.new.csv otrkey_files.csv
           git add otrkey_files.csv
           git commit -m "⬇️ Update otrkey_files.csv" || echo "No CSV changes to commit."
 
