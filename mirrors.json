@@ -54,7 +54,7 @@
         "proxy": "PROXY1"
     },
     {
-        "name": "otr-lab.net",
+        "name": "otr-lab.net/archiv",
         "list_url": "https://otr-lab.net/archiv/archiv.txt",
         "search_url": "https://otr-lab.net/archiv/?file={query}",
         "proxy": "PROXY1"

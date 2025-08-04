@@ -2,38 +2,64 @@ name: Update otrkey files every 30 min
 
 on:
   schedule:
-    - cron: '*/30 * * * *' # every 30 minutes
+    - cron: '*/30 * * * *'  # Every 30 minutes
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  update:
+  clean_and_update_csv:
     runs-on: ubuntu-latest
     env:
       API_KEY: ${{ secrets.API_KEY }}
+
     steps:
-      - name: Checkout repo
+      - name: Checkout full repo history
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false  # we'll set our own remote with PAT
+
+      - name: Configure Git author
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Install dependencies
-        run: pip install requests
+      - name: Install runtime deps
+        run: |
+          pip install requests
 
-      - name: Run OTRKey fetch script
-        run: python download_otrkey_files.py
+      - name: Install git-filter-repo
+        run: |
+          curl -sSL https://raw.githubusercontent.com/newren/git-filter-repo/main/git-filter-repo > /usr/local/bin/git-filter-repo
+          chmod +x /usr/local/bin/git-filter-repo
 
-      - name: Commit updated CSV
-        uses: EndBug/add-and-commit@v9
-        with:
-          add: 'otrkey_files.csv'
-          message: '⬇️ Update otrkey_files.csv'
-          author_name: 'GitHub Actions'
-          author_email: 'actions@github.com'
+      - name: Remove ALL history of otrkey_files.csv (keep code history)
+        run: |
+          # This rewrites history to remove the CSV from ALL past commits.
+          # After this step, the file will not exist in the working tree.
+          git-filter-repo --path otrkey_files.csv --invert-paths
+
+      - name: Run OTRKey fetch script to produce fresh CSV
+        run: |
+          python download_otrkey_files.py
+
+      - name: Commit latest CSV only
+        run: |
+          git add otrkey_files.csv
+          git commit -m "⬇️ Add latest otrkey_files.csv (no history retained)" || echo "No CSV changes to commit."
+
+      - name: Push rewritten history
+        env:
+          REPO: ${{ github.repository }}
+          PAT: ${{ secrets.PERSONAL_TOKEN }}
+        run: |
+          git remote set-url origin https://x-access-token:${PAT}@github.com/${REPO}.git
+          # Force-push the rewritten history (tags not pushed)
+          git push --force --no-tags origin HEAD:main
