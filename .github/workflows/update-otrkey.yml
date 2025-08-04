@@ -53,7 +53,7 @@ jobs:
       - name: Commit latest CSV only
         run: |
           git add otrkey_files.csv
-          git commit -m "⬇️ Add latest otrkey_files.csv (no history retained)" || echo "No CSV changes to commit."
+          git commit -m "⬇️ Update otrkey_files.csv" || echo "No CSV changes to commit."
 
       - name: Push rewritten history
         env:
