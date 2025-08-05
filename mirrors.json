@@ -24,19 +24,19 @@
         "proxy": null
     },
     {
-        "name": "otr-files.de_1",
+        "name": "otr-files.de",
         "list_url": "https://www.otr-files.de/index.php?option=com_include&Itemid=63&seite=all",
         "search_url": "https://www.otr-files.de/?file={query}",
         "proxy": null
     },
     {
-        "name": "otr-files.de_2",
+        "name": "otr-files.de",
         "list_url": "https://www.otr-files.de/index.php?option=com_include&Itemid=64&seite=all",
         "search_url": "https://www.otr-files.de/?file={query}",
         "proxy": null
     },
     {
-        "name": "otr-files.de_3",
+        "name": "otr-files.de",
         "list_url": "https://www.otr-files.de/index.php?option=com_include&Itemid=31&seite=all",
         "search_url": "https://www.otr-files.de/?file={query}",
         "proxy": null
