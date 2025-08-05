@@ -147,7 +147,7 @@
 
         // Format date to YYYY-MM-DD
         if (info.date) {
-            const [day, month, year] = info.date.split('.');
+            const [year, month, day] = info.date.split('.');
             info.date = `20${year}-${month}-${day}`;
         }
 
