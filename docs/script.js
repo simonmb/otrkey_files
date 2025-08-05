@@ -129,7 +129,12 @@
 
         const formatOrder = ['mp4', 'avi', 'HQ', 'HD'];
 
-        for (const [key, filesInGroup] of groups.entries()) {
+        const sortedGroups = Array.from(groups.entries()).sort(([keyA], [keyB]) => {
+            return keyA.localeCompare(keyB);
+        });
+
+
+        for (const [key, filesInGroup] of sortedGroups) {
             const { title, date, time, channel, duration, season, episode } = filesInGroup[0].parsed;
 
             // Construct label with SxxEyy if present
@@ -160,9 +165,9 @@
             const li = document.createElement('li');
             li.className = 'list-group-item';
             li.innerHTML = `
-      <div>${heading}</div>
-      <div class="mt-1">${links}</div>
-    `;
+                            <div>${heading}</div>
+                            <div class="mt-1">${links}</div>
+                            `;
             resultsEl.appendChild(li);
         }
     }
