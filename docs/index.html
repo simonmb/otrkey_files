@@ -81,13 +81,16 @@
             </div>
         </div>
 
-        <!-- Shows only during search action -->
+        <div class="progress mb-3 text-center" style="height: 20px; display: none;" id="progressWrapper">
+            Loading database of otrkey files...
+            <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+        </div>
+
         <div id="searching" class="text-center d-none">
             Searching...
         </div>
 
         <ul id="results" class="list-group shadow-sm">
-            <!-- script.js will populate -->
         </ul>
 
         <div id="no-results" class="no-results text-center mt-3 d-none">

@@ -4,10 +4,47 @@
     const repoName = 'otrkey_files';
     const baseRaw = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branch}/`;
 
-    const [csvText, mirrorList] = await Promise.all([
-        fetch(baseRaw + 'otrkey_files.csv').then((r) => r.text()),
-        fetch(baseRaw + 'mirrors.json').then((r) => r.json()),
-    ]);
+    function downloadWithProgress(url) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', url, true);
+            xhr.responseType = 'text';
+
+            const progressWrapper = document.getElementById('progressWrapper');
+            const progressBar = document.getElementById('progressBar');
+            progressWrapper.style.display = 'block';
+
+            xhr.onprogress = function (event) {
+                if (event.lengthComputable) {
+                    const percent = Math.floor((event.loaded / event.total) * 100);
+                    progressBar.style.width = percent + '%';
+                    progressBar.textContent = percent + '%';
+                }
+            };
+
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    progressBar.style.width = '100%';
+                    progressBar.textContent = '100%';
+                    setTimeout(() => {
+                        progressWrapper.style.display = 'none';
+                    }, 500);
+                    resolve(xhr.responseText);
+                } else {
+                    reject(new Error('Failed to download CSV'));
+                }
+            };
+
+            xhr.onerror = function () {
+                reject(new Error('Network error'));
+            };
+
+            xhr.send();
+        });
+    }
+
+    const csvText = await downloadWithProgress(baseRaw + 'otrkey_files.csv');
+    const mirrorList = await fetch(baseRaw + 'mirrors.json').then((r) => r.json());
 
     const parsedCsv = Papa.parse(csvText, {
         header: true,
