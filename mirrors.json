@@ -49,14 +49,14 @@
     },
     {
         "name": "otr-lab.net",
-        "list_url": "https://otr-lab.net/otrkeyfinder.txt",
+        "list_url": "https://server1.otr-lab.net:444/otrkeyfinder.txt",
         "search_url": "https://otr-lab.net/?file={query}",
-        "proxy": "PROXY1"
+        "proxy": null
     },
     {
         "name": "otr-lab.net/archiv",
-        "list_url": "https://otr-lab.net/archiv/archiv.txt",
+        "list_url": "https://server1.otr-lab.net:444/archiv.txt",
         "search_url": "https://otr-lab.net/archiv/?file={query}",
-        "proxy": "PROXY1"
+        "proxy": null
     }
 ]
