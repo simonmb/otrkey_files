@@ -1,14 +1,12 @@
 (async function () {
-    const branch = 'main';
-    const repoOwner = 'simonmb';
-    const repoName = 'otrkey_files';
-    const baseRaw = `https://raw.githubusercontent.com/${repoOwner}/${repoName}/${branch}/`;
+    const zipUrl = 'https://cdn.jsdelivr.net/gh/simonmb/otrkey_files/otrkey_files.zip';
+    let files = []; // Make 'files' available globally inside IIFE
 
-    function downloadWithProgress(url) {
+    function downloadZipWithProgress(url) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open('GET', url, true);
-            xhr.responseType = 'text';
+            xhr.responseType = 'arraybuffer';
 
             const progressWrapper = document.getElementById('progressWrapper');
             const progressBar = document.getElementById('progressBar');
@@ -29,9 +27,9 @@
                     setTimeout(() => {
                         progressWrapper.style.display = 'none';
                     }, 500);
-                    resolve(xhr.responseText);
+                    resolve(xhr.response);
                 } else {
-                    reject(new Error('Failed to download CSV'));
+                    reject(new Error('Failed to download ZIP'));
                 }
             };
 
@@ -43,16 +41,26 @@
         });
     }
 
-    const csvText = await downloadWithProgress(baseRaw + 'otrkey_files.csv');
-    const mirrorList = await fetch(baseRaw + 'mirrors.json').then((r) => r.json());
+    const zipData = await downloadZipWithProgress(zipUrl);
+    const zip = await JSZip.loadAsync(zipData);
+
+    const csvFile = zip.file('otrkey_files.csv');
+    if (!csvFile) {
+        console.error("CSV file not found in ZIP");
+        return;
+    }
+
+    const csvText = await csvFile.async('text');
+    const mirrorList = await fetch('https://cdn.jsdelivr.net/gh/simonmb/otrkey_files/mirrors.json').then((r) => r.json());
 
     const parsedCsv = Papa.parse(csvText, {
         header: true,
         skipEmptyLines: true,
     });
 
-    const files = parsedCsv.data
-        .filter((row) => row.mirror_name && row.file_name)
+    console.log('Parsed rows:', parsedCsv.data.length);
+
+    files = parsedCsv.data
         .map((row) => ({
             ...row,
             parsed: parseOtrkeyFilename(row.file_name),
@@ -64,6 +72,17 @@
             mirrorMap[m.name] = m.search_url;
         }
     });
+
+    // Populate mirror checkboxes
+    const mirrorFilterEl = document.getElementById('mirrorFilter');
+    Object.keys(mirrorMap).forEach((mirror) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<label><input type="checkbox" value="${mirror}" class="form-check-input me-2" checked>${mirror}</label>`;
+        mirrorFilterEl.appendChild(li);
+    });
+
+    // Check all format checkboxes by default
+    document.querySelectorAll('#formatFilter input[type="checkbox"]').forEach(cb => cb.checked = true);
 
     const inputEl = document.getElementById('search');
     const resultsEl = document.getElementById('results');
@@ -86,6 +105,7 @@
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '');
     }
+
     async function performSearch() {
         const term = normalize(inputEl.value.trim());
         if (!term) {
@@ -99,11 +119,32 @@
 
         await new Promise((r) => setTimeout(r, 0));
 
-        const filtered = files.filter(({ parsed, file_name }) =>
-            (parsed && normalize(parsed.title).includes(term)) ||
-            normalize(file_name).includes(term)
-        );
+        if (!files || files.length === 0) {
+            searchingEl.classList.add('d-none');
+            noResultsEl.classList.remove('d-none');
+            return;
+        }
 
+        const selectedFormats = Array.from(document.querySelectorAll('#formatFilter input:checked')).map(i => i.value.toLowerCase());
+        const selectedMirrors = Array.from(document.querySelectorAll('#mirrorFilter input:checked')).map(i => i.value);
+
+        const filtered = files.filter(({ parsed, file_name, mirror_name }) => {
+            const matchesQuery =
+                (parsed && normalize(parsed.title).includes(term)) ||
+                normalize(file_name).includes(term);
+
+            const matchesFormat =
+                selectedFormats.length === 0 ||
+                selectedFormats.includes(parsed.format.toLowerCase());
+
+            const matchesMirror =
+                selectedMirrors.length === 0 ||
+                selectedMirrors.includes(mirror_name);
+
+            return matchesQuery && matchesFormat && matchesMirror;
+        });
+
+        console.log('Filtered results:', filtered.length);
         searchingEl.classList.add('d-none');
 
         if (filtered.length === 0) {
@@ -121,23 +162,20 @@
             groups.get(key).push({
                 mirror_name: row.mirror_name,
                 file_name: row.file_name,
-                container: p.container,
-                quality: p.quality,
+                format: p.format,
                 parsed: p
             });
         }
 
-        const formatOrder = ['mp4', 'avi', 'HQ', 'HD'];
+        const formatOrder = ['mp3', 'ac3', 'mp4', 'avi', 'HQ', 'HD'];
 
         const sortedGroups = Array.from(groups.entries()).sort(([keyA], [keyB]) => {
             return keyA.localeCompare(keyB);
         });
 
-
         for (const [key, filesInGroup] of sortedGroups) {
             const { title, date, time, channel, duration, season, episode } = filesInGroup[0].parsed;
 
-            // Construct label with SxxEyy if present
             let titleLine = `<strong>${title}</strong>`;
             if (season && episode) {
                 titleLine += ` <span class="text-muted">(S${season}E${episode})</span>`;
@@ -146,32 +184,27 @@
             const heading = `${titleLine} — ${date} ${time} — ${channel} — ${duration} min`;
 
             const links = filesInGroup
-                .map(({ mirror_name, file_name, container, quality }) => {
-                    const label = quality?.toUpperCase() || container.toLowerCase();
+                .map(({ mirror_name, file_name, format, parsed }) => {
                     const urlTemplate = mirrorMap[mirror_name];
                     if (!urlTemplate) return null;
                     const url = urlTemplate.replace('{query}', encodeURIComponent(file_name));
-                    return { label, url };
+                    return { format, url };
                 })
                 .filter(Boolean)
                 .sort((a, b) => {
-                    const idxA = formatOrder.indexOf(a.label);
-                    const idxB = formatOrder.indexOf(b.label);
+                    const idxA = formatOrder.indexOf(a.format);
+                    const idxB = formatOrder.indexOf(b.format);
                     return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
                 })
-                .map(({ label, url }) => `<a href="${url}" target="_blank" class="me-2">${label}</a>`)
+                .map(({ format, url }) => `<a href="${url}" target="_blank" class="me-2">${format}</a>`)
                 .join(' ');
 
             const li = document.createElement('li');
             li.className = 'list-group-item';
-            li.innerHTML = `
-                            <div>${heading}</div>
-                            <div class="mt-1">${links}</div>
-                            `;
+            li.innerHTML = `<div>${heading}</div><div class="mt-1">${links}</div>`;
             resultsEl.appendChild(li);
         }
     }
-
 
     function clearSearch() {
         resultsEl.innerHTML = '';
@@ -180,20 +213,21 @@
     }
 
     function parseOtrkeyFilename(filename) {
-        const pattern = /^(?<title>.+?)(?:_S(?<season>\d{2})E(?<episode>\d{2}))?_(?<date>\d{2}\.\d{2}\.\d{2})_(?<time>\d{2}-\d{2})_(?<channel>[a-z0-9]+)_(?<duration>\d+)_TVOON_DE\.mpg(?:\.(?<quality>HQ|HD))?\.(?<container>avi|mp4)\.otrkey$/i;
+        const pattern = /^(?<title>.+?)(?:_S(?<season>\d{2})E(?<episode>\d{2}))?_(?<date>\d{2}\.\d{2}\.\d{2})_(?<time>\d{2}-\d{2})_(?<channel>[a-z0-9]+)_(?<duration>\d+)_TVOON_DE\.mpg(?:\.(?<quality>HQ|HD))?(?:\.fra)?(?:\.auto)?(?:\.cut)?\.(?:(?<video_format>avi|mp4)|(?<audio_format>ac3|mp3))\.otrkey$/i;
 
         const match = filename.match(pattern);
-        if (!match || !match.groups) return null;
+        if (!match || !match.groups) {
+            console.log('No match', filename);
+            return null;
+        }
 
         const info = { ...match.groups };
 
-        // Format date to YYYY-MM-DD
         if (info.date) {
             const [year, month, day] = info.date.split('.');
             info.date = `20${year}-${month}-${day}`;
         }
 
-        // Format time to HH:MM
         if (info.time) {
             const [hour, minute] = info.time.split('-');
             info.time = `${hour}:${minute}`;
@@ -203,7 +237,16 @@
             info.title = info.title.replace(/_/g, ' ').trim();
         }
 
+        info.format = (info.audio_format || info.quality || info.video_format || 'avi');
+
+        // Cleanup
+        delete info.quality;
+        delete info.video_format;
+        delete info.audio_format;
+
         return info;
     }
+
+
 
 })();
