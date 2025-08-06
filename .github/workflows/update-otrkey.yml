@@ -43,18 +43,20 @@ jobs:
       - name: Run OTRKey fetch script (write to temp)
         run: |
           python download_otrkey_files.py
-          # Keep a copy OUTSIDE the repo before rewriting history
+          # Save new CSV and create zip version
           cp otrkey_files.csv /tmp/otrkey_files.new.csv
+          zip -j /tmp/otrkey_files.zip otrkey_files.csv
 
       - name: Remove ALL history of otrkey_files.csv (keep code history)
         run: |
-          git-filter-repo --force --path otrkey_files.csv --invert-paths
+          git-filter-repo --force --path otrkey_files.csv --path otrkey_files.zip --invert-paths
 
       - name: Restore fresh CSV and commit
         run: |
           cp /tmp/otrkey_files.new.csv otrkey_files.csv
-          git add otrkey_files.csv
-          git commit -m "⬇️ Update otrkey_files.csv" || echo "No CSV changes to commit."
+          cp /tmp/otrkey_files.zip otrkey_files.zip
+          git add otrkey_files.csv otrkey_files.zip
+          git commit -m "⬇️ Update otrkey_files" || echo "No changes to commit."
 
       - name: Push rewritten history
         env:
