@@ -173,18 +173,34 @@
             return keyA.localeCompare(keyB);
         });
 
+        const fragment = document.createDocumentFragment();
+
         for (const [key, filesInGroup] of sortedGroups) {
             const { title, date, time, channel, duration, season, episode } = filesInGroup[0].parsed;
 
-            let titleLine = `<strong>${title}</strong>`;
+            // Build heading
+            const headingDiv = document.createElement('div');
+
+            const titleStrong = document.createElement('strong');
+            titleStrong.textContent = title;
+            headingDiv.appendChild(titleStrong);
+
             if (season && episode) {
-                titleLine += ` <span class="text-muted">(S${season}E${episode})</span>`;
+                const episodeSpan = document.createElement('span');
+                episodeSpan.className = 'text-muted';
+                episodeSpan.textContent = ` (S${season}E${episode})`;
+                headingDiv.appendChild(episodeSpan);
             }
 
-            const heading = `${titleLine} — ${date} ${time} — ${channel} — ${duration} min`;
+            const metaText = document.createTextNode(` — ${date} ${time} — ${channel} — ${duration} min`);
+            headingDiv.appendChild(metaText);
+
+            // Build links
+            const linksDiv = document.createElement('div');
+            linksDiv.className = 'mt-1';
 
             const links = filesInGroup
-                .map(({ mirror_name, file_name, format, parsed }) => {
+                .map(({ mirror_name, file_name, format }) => {
                     const urlTemplate = mirrorMap[mirror_name];
                     if (!urlTemplate) return null;
                     const url = urlTemplate.replace('{query}', encodeURIComponent(file_name));
@@ -195,15 +211,28 @@
                     const idxA = formatOrder.indexOf(a.format);
                     const idxB = formatOrder.indexOf(b.format);
                     return (idxA === -1 ? 999 : idxA) - (idxB === -1 ? 999 : idxB);
-                })
-                .map(({ format, url }) => `<a href="${url}" target="_blank" class="me-2">${format}</a>`)
-                .join(' ');
+                });
 
+            for (const { format, url } of links) {
+                const a = document.createElement('a');
+                a.href = url;
+                a.target = '_blank';
+                a.className = 'me-2';
+                a.textContent = format;
+                linksDiv.appendChild(a);
+            }
+
+            // Build list item
             const li = document.createElement('li');
             li.className = 'list-group-item';
-            li.innerHTML = `<div>${heading}</div><div class="mt-1">${links}</div>`;
-            resultsEl.appendChild(li);
+            li.appendChild(headingDiv);
+            li.appendChild(linksDiv);
+
+            fragment.appendChild(li);
         }
+
+        resultsEl.appendChild(fragment);
+
     }
 
     function clearSearch() {
