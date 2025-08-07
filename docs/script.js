@@ -157,9 +157,9 @@
         for (const row of filtered) {
             const p = row.parsed;
             if (!p) continue;
-            const key = `${p.title}|${p.date}|${p.time}|${p.channel}|${p.duration}`;
-            if (!groups.has(key)) groups.set(key, []);
-            groups.get(key).push({
+            //const key = `${p.title}|${p.sortK}|${p.time}|${p.channel}|${p.duration}`;
+            if (!groups.has(p.sortKey)) groups.set(p.sortKey, []);
+            groups.get(p.sortKey).push({
                 mirror_name: row.mirror_name,
                 file_name: row.file_name,
                 format: p.format,
@@ -252,9 +252,8 @@
 
         const info = { ...match.groups };
 
-        if (info.date) {
-            const [year, month, day] = info.date.split('.');
-            info.date = `20${year}-${month}-${day}`;
+        if (info.title) {
+            info.title = info.title.replace(/_/g, ' ').trim();
         }
 
         if (info.time) {
@@ -262,8 +261,10 @@
             info.time = `${hour}:${minute}`;
         }
 
-        if (info.title) {
-            info.title = info.title.replace(/_/g, ' ').trim();
+        if (info.date) {
+            const [year, month, day] = info.date.split('.');
+            info.date = `20${year}-${month}-${day}`;
+            info.sortKey = `${info.title}|${100 - year}-${12 - month}-${31 - day}|${info.time}|${info.channel}|${info.duration}`;
         }
 
         info.format = (info.audio_format || info.quality || info.video_format || 'avi');
