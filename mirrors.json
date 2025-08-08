@@ -18,6 +18,12 @@
         "proxy": null
     },
     {
+        "name": "simple-otr-mirror-alternative.de",
+        "list_url": "https://simple-otr-mirror-alternative.de/filelist.txt",
+        "search_url": "https://simple-otr-mirror-alternative.de/?file={query}",
+        "proxy": null
+    },
+    {
         "name": "simple-otr-mirror-low-quality.de",
         "list_url": "https://simple-otr-mirror-low-quality.de/",
         "search_url": "https://simple-otr-mirror-low-quality.de/?file={query}",
