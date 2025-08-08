@@ -37,7 +37,7 @@ jobs:
 
       - name: Install git-filter-repo
         run: |
-          curl -sSL https://raw.githubusercontent.com/newren/git-filter-repo/main/git-filter-repo > /usr/local/bin/git-filter-repo
+          curl -sSL https://cdn.jsdelivr.net/gh/newren/git-filter-repo/git-filter-repo > /usr/local/bin/git-filter-repo
           chmod +x /usr/local/bin/git-filter-repo
 
       - name: Run OTRKey fetch script (write to temp)
