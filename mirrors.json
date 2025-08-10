@@ -31,19 +31,7 @@
     },
     {
         "name": "otr-files.de",
-        "list_url": "https://www.otr-files.de/index.php?option=com_include&Itemid=63&seite=all",
-        "search_url": "https://www.otr-files.de/?file={query}",
-        "proxy": null
-    },
-    {
-        "name": "otr-files.de",
-        "list_url": "https://www.otr-files.de/index.php?option=com_include&Itemid=64&seite=all",
-        "search_url": "https://www.otr-files.de/?file={query}",
-        "proxy": null
-    },
-    {
-        "name": "otr-files.de",
-        "list_url": "https://www.otr-files.de/index.php?option=com_include&Itemid=31&seite=all",
+        "list_url": "https://www.otr-files.de/otrkeys_simonmb.php",
         "search_url": "https://www.otr-files.de/?file={query}",
         "proxy": null
     },
