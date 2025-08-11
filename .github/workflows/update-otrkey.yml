@@ -77,3 +77,4 @@ jobs:
         with:
           url: |
             https://cdn.jsdelivr.net/gh/simonmb/otrkey_files@main/otrkey_files.zip
+            https://cdn.jsdelivr.net/gh/simonmb/otrkey_files@main/mirrors.json
