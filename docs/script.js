@@ -1,5 +1,6 @@
 (async function () {
-    const zipUrl = 'https://cdn.jsdelivr.net/gh/simonmb/otrkey_files@main/otrkey_files.zip';
+    const CB = `v=${Math.floor(Date.now() / (30 * 60 * 1000))}`;
+    const zipUrl = `https://cdn.jsdelivr.net/gh/simonmb/otrkey_files@main/otrkey_files.zip?${CB}`;
     let files = []; // Make 'files' available globally inside IIFE
 
     function downloadZipWithProgress(url) {
@@ -51,7 +52,7 @@
     }
 
     const csvText = await csvFile.async('text');
-    const mirrorList = await fetch('https://cdn.jsdelivr.net/gh/simonmb/otrkey_files/mirrors.json').then((r) => r.json());
+    const mirrorList = await fetch(`https://cdn.jsdelivr.net/gh/simonmb/otrkey_files@main/mirrors.json?${CB}`).then((r) => r.json());
 
     const parsedCsv = Papa.parse(csvText, {
         header: true,
