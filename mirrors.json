@@ -37,7 +37,7 @@
     },
     {
         "name": "datenkeller.net",
-        "list_url": "https://otr.datenkeller.net/filmindex",
+        "list_url": "https://otr.datenkeller.net/keyliste.txt",
         "search_url": "https://otr.datenkeller.net/?file={query}",
         "proxy": null
     },
