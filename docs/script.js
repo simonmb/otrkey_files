@@ -1,5 +1,5 @@
 (async function () {
-    const zipUrl = 'https://cdn.jsdelivr.net/gh/simonmb/otrkey_files/otrkey_files.zip';
+    const zipUrl = 'https://cdn.jsdelivr.net/gh/simonmb/otrkey_files@main/otrkey_files.zip';
     let files = []; // Make 'files' available globally inside IIFE
 
     function downloadZipWithProgress(url) {
