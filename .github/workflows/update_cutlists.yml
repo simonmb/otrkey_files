@@ -1,0 +1,20 @@
+name: Fetch and Print Files
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fetch-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch first file and print
+        run: |
+          echo "Fetching first file..."
+          curl -s "https://sniplist.mepaso.net/getxml.php?name=Die_Luther_Matrix_17.04.11_23-00_ard_90_TVOON_DE." \
+            || echo "Failed to fetch first file"
+
+      - name: Fetch second file and print
+        run: |
+          echo "Fetching second file..."
+          curl -s "http://cutlist.at/getxml.php?name=Broad_City__Die_Matrix" \
+            || echo "Failed to fetch second file"
