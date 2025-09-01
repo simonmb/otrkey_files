@@ -1,6 +1,6 @@
 (async function () {
     const CB = `v=${Math.floor(Date.now() / (30 * 60 * 1000))}`;
-    const zipUrl = `https://cdn.jsdelivr.net/gh/simonmb/otrkey_files@main/otrkey_files.zip?${CB}`;
+    const zipUrl = `https://raw.githubusercontent.com/simonmb/otrkey_files/refs/heads/main/otrkey_files.zip?${CB}`;
     let files = []; // Make 'files' available globally inside IIFE
 
     function downloadZipWithProgress(url) {
