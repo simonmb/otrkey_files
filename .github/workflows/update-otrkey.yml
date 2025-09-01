@@ -72,9 +72,9 @@ jobs:
           # Push to the current branch (works on main or others)
           CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
           git push --force --no-tags origin "HEAD:${CURRENT_BRANCH}"
-      - name: Purge jsDelivr cache
-        uses: gacts/purge-jsdelivr-cache@v1
-        with:
-          url: |
-            https://cdn.jsdelivr.net/gh/simonmb/otrkey_files@main/otrkey_files.zip
-            https://cdn.jsdelivr.net/gh/simonmb/otrkey_files@main/mirrors.json
+      #- name: Purge jsDelivr cache
+      #  uses: gacts/purge-jsdelivr-cache@v1
+      #  with:
+      #    url: |
+      #      https://cdn.jsdelivr.net/gh/simonmb/otrkey_files@main/otrkey_files.zip
+      #      https://cdn.jsdelivr.net/gh/simonmb/otrkey_files@main/mirrors.json
