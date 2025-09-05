@@ -7,17 +7,20 @@ import requests
 from concurrent.futures import ThreadPoolExecutor
 
 
-def parse_otrkey_filename(filename):
+def parse_otrkey_filename(filename: str):
     pattern = re.compile(
-        r"""^(?P<title>.+?)                                   # Title
-        (?:_S(?P<season>\d{2})E(?P<episode>\d{2}))?           # Optional SxxExx
-        _(?P<date>\d{2}\.\d{2}\.\d{2})                        # Date
-        _(?P<time>\d{2}-\d{2})                                # Time
-        _(?P<channel>[a-z0-9]+)                               # Channel
-        _(?P<duration>\d+)                                    # Duration
-        _TVOON_DE\.mpg                                        # Fixed marker
-        (?:\.(?P<quality>HQ|HD))?                             # Optional quality
-        \.(?P<container>avi|mp4)                              # Container
+        r"""^(?P<title>.+?)
+        (?:_S(?P<season>\d{2})E(?P<episode>\d{2}))?
+        _(?P<date>\d{2}\.\d{2}\.\d{2})
+        _(?P<time>\d{2}-\d{2})
+        _(?P<channel>[a-z0-9]+)
+        _(?P<duration>\d+)
+        _TVOON_DE\.mpg
+        (?:\.(?P<quality>HQ|HD))?
+        (?:\.fra)?
+        (?:\.auto)?
+        (?:\.cut)?
+        \.(?:(?P<video_format>avi|mp4)|(?P<audio_format>ac3|mp3))
         \.otrkey$""",
         re.VERBOSE | re.IGNORECASE,
     )
@@ -28,18 +31,32 @@ def parse_otrkey_filename(filename):
 
     info = match.groupdict()
 
-    # Reformat date to YYYY-MM-DD
-    if info["date"]:
-        day, month, year = info["date"].split(".")
-        info["date"] = f"20{year}-{month}-{day}"
+    # Clean up title
+    if info.get("title"):
+        info["title"] = info["title"].replace("_", " ").strip()
 
-    # Reformat time to HH:MM
-    if info["time"]:
+    # Reformat time
+    if info.get("time"):
         hour, minute = info["time"].split("-")
         info["time"] = f"{hour}:{minute}"
 
-    # Replace underscores with spaces in title
-    info["title"] = info["title"].replace("_", " ").strip()
+    # Reformat date and build sortKey
+    if info.get("date"):
+        year, month, day = info["date"].split(".")
+        info["date"] = f"20{year}-{month}-{day}"
+        info["sortKey"] = (
+            f"{info['title']}|"
+            f"{100 - int(year)}-{12 - int(month)}-{31 - int(day)}|"
+            f"{info['time']}|{info['channel']}|{info['duration']}"
+        )
+
+    # Determine format
+    info["format"] = info.get("audio_format") or info.get("quality") or info.get("video_format") or "avi"
+
+    # Remove temporary fields
+    info.pop("quality", None)
+    info.pop("video_format", None)
+    info.pop("audio_format", None)
 
     return info
 
@@ -93,13 +110,20 @@ def fetch_files_for_mirror(mirror, fallback_entries):
         return [{"mirror_name": mirror["name"], "file_name": f} for f in cached]
 
 
-def load_existing_entries():
+def load_existing_entries(mode="otrkey"):
     fallback = {}
     try:
-        with open("otrkey_files.csv", "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                fallback.setdefault(row["mirror_name"], []).append(row["file_name"])
+        if mode == "otrkey":
+            with open("otrkey_files.csv", "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    fallback.setdefault(row["mirror_name"], []).append(row["file_name"])
+        elif mode == "cutlist":
+            with open("cutlists.csv", "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    key  = row["name"].split("_TVOON_")[0]
+                    fallback.setdefault(key, []).append(row["name"])
     except FileNotFoundError:
         print("⚠️  No existing CSV found. Will not use fallback.")
     return fallback
@@ -107,7 +131,8 @@ def load_existing_entries():
 
 def main():
     print("Gather OTR mirror list...")
-    fallback_entries = load_existing_entries()
+    fallback_entries = load_existing_entries("otrkey")
+    cutlist_entries = load_existing_entries("cutlist")
     results = []
     with ThreadPoolExecutor(max_workers=8) as executor:
         futures = [
@@ -117,8 +142,14 @@ def main():
         for future in futures:
             results.extend(future.result())
 
+    for row in results:
+        key  = row["file_name"].split("_TVOON_")[0]
+        row['n_cutlists'] = 0
+        if key in cutlist_entries:
+            row['n_cutlists'] = len(cutlist_entries[key])
+
     with open("otrkey_files.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["mirror_name", "file_name"])
+        writer = csv.DictWriter(f, fieldnames=["mirror_name", "file_name", "n_cutlists"])
         writer.writeheader()
         writer.writerows(results)
 
