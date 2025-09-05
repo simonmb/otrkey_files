@@ -211,7 +211,7 @@
             // determine cutlist availability across mirrors (take max)
             const maxCutlists = Math.max(...filesInGroup.map(f => f.cutlistCount || 0));
 
-            // cutlist icon + link directly after minutes
+            // cutlist icon link directly after minutes
             const cutlistLink = document.createElement('a');
             cutlistLink.href = buildCutlistUrl(filesInGroup[0].file_name);
             cutlistLink.target = '_blank';
@@ -222,14 +222,13 @@
             icon.textContent = '🎬';
 
             if (maxCutlists > 0) {
-                icon.title = "cutlist available last time we checked";
+                icon.title = 'cutlist available: click to recheck...';
             } else {
+                icon.title = 'cutlist unavailable: click to recheck...';
                 icon.style.opacity = '0.4';
-                icon.title = "cutlist unavailable last time we checked";
             }
 
             cutlistLink.appendChild(icon);
-            cutlistLink.appendChild(document.createTextNode(' cutlist available now?'));
 
             // attach meta + cutlist link inline
             headingDiv.appendChild(metaDiv);
