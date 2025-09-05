@@ -206,8 +206,6 @@
             // Meta text
             const metaDiv = document.createElement('div');
             metaDiv.className = 'text-muted d-inline';
-
-            // base meta text
             metaDiv.textContent = ` — ${date} ${time} — ${channel} — ${duration} min `;
 
             // determine cutlist availability across mirrors (take max)
@@ -222,10 +220,16 @@
             const icon = document.createElement('span');
             icon.setAttribute('aria-hidden', 'true');
             icon.textContent = '🎬';
-            if (maxCutlists === 0) icon.style.opacity = '0.4';
+
+            if (maxCutlists > 0) {
+                icon.title = "cutlist available last time we checked";
+            } else {
+                icon.style.opacity = '0.4';
+                icon.title = "cutlist unavailable last time we checked";
+            }
 
             cutlistLink.appendChild(icon);
-            cutlistLink.appendChild(document.createTextNode(' cutlist?'));
+            cutlistLink.appendChild(document.createTextNode(' cutlist available now?'));
 
             // attach meta + cutlist link inline
             headingDiv.appendChild(metaDiv);
