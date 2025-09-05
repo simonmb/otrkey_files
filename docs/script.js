@@ -61,9 +61,11 @@
 
     console.log('Parsed rows:', parsedCsv.data.length);
 
+    // keep cutlist count (n_cutlists) from CSV
     files = parsedCsv.data
         .map((row) => ({
             ...row,
+            cutlistCount: Number(row.n_cutlists) || 0,
             parsed: parseOtrkeyFilename(row.file_name),
         }));
 
@@ -105,6 +107,14 @@
             .replace(/_/g, '')
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '');
+    }
+
+    // Build the cutlist search URL using only the filename up to "_TVOON_"
+    function buildCutlistUrl(fileName) {
+        const CUTLIST_BASE = 'http://cutlist.at/#!/search?q=';
+        const idx = fileName.indexOf('_TVOON_');
+        const upTo = idx !== -1 ? fileName.slice(0, idx) : fileName;
+        return CUTLIST_BASE + encodeURIComponent(upTo);
     }
 
     async function performSearch() {
@@ -158,13 +168,13 @@
         for (const row of filtered) {
             const p = row.parsed;
             if (!p) continue;
-            //const key = `${p.title}|${p.sortK}|${p.time}|${p.channel}|${p.duration}`;
             if (!groups.has(p.sortKey)) groups.set(p.sortKey, []);
             groups.get(p.sortKey).push({
                 mirror_name: row.mirror_name,
                 file_name: row.file_name,
                 format: p.format,
-                parsed: p
+                parsed: p,
+                cutlistCount: row.cutlistCount,
             });
         }
 
@@ -179,7 +189,7 @@
         for (const [key, filesInGroup] of sortedGroups) {
             const { title, date, time, channel, duration, season, episode } = filesInGroup[0].parsed;
 
-            // Build heading
+            // Heading line (title + meta)
             const headingDiv = document.createElement('div');
 
             const titleStrong = document.createElement('strong');
@@ -193,10 +203,35 @@
                 headingDiv.appendChild(episodeSpan);
             }
 
-            const metaText = document.createTextNode(` — ${date} ${time} — ${channel} — ${duration} min`);
-            headingDiv.appendChild(metaText);
+            // Meta text
+            const metaDiv = document.createElement('div');
+            metaDiv.className = 'text-muted d-inline';
 
-            // Build links
+            // base meta text
+            metaDiv.textContent = ` — ${date} ${time} — ${channel} — ${duration} min `;
+
+            // determine cutlist availability across mirrors (take max)
+            const maxCutlists = Math.max(...filesInGroup.map(f => f.cutlistCount || 0));
+
+            // cutlist icon + link directly after minutes
+            const cutlistLink = document.createElement('a');
+            cutlistLink.href = buildCutlistUrl(filesInGroup[0].file_name);
+            cutlistLink.target = '_blank';
+            cutlistLink.className = 'text-decoration-none small ms-1';
+
+            const icon = document.createElement('span');
+            icon.setAttribute('aria-hidden', 'true');
+            icon.textContent = '🎬';
+            if (maxCutlists === 0) icon.style.opacity = '0.4';
+
+            cutlistLink.appendChild(icon);
+            cutlistLink.appendChild(document.createTextNode(' cutlist?'));
+
+            // attach meta + cutlist link inline
+            headingDiv.appendChild(metaDiv);
+            headingDiv.appendChild(cutlistLink);
+
+            // Mirror/format links row
             const linksDiv = document.createElement('div');
             linksDiv.className = 'mt-1';
 
@@ -223,7 +258,7 @@
                 linksDiv.appendChild(a);
             }
 
-            // Build list item
+            // List item
             const li = document.createElement('li');
             li.className = 'list-group-item';
             li.appendChild(headingDiv);
@@ -277,7 +312,4 @@
 
         return info;
     }
-
-
-
 })();
