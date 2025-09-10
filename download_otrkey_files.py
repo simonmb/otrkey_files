@@ -112,6 +112,7 @@ def fetch_files_for_mirror(mirror, fallback_entries):
 
 def load_existing_entries(mode="otrkey"):
     fallback = {}
+    error_flags = ['MissingBeginning', 'MissingEnding', 'MissingVideo', 'MissingAudio', 'OtherError', 'EPGError']
     try:
         if mode == "otrkey":
             with open("otrkey_files.csv", "r", encoding="utf-8") as f:
@@ -123,7 +124,8 @@ def load_existing_entries(mode="otrkey"):
                 reader = csv.DictReader(f)
                 for row in reader:
                     key  = row["name"].split("_TVOON_")[0]
-                    fallback.setdefault(key, []).append(row["name"])
+                    row['errors'] = [error_flags[i] for i, v in enumerate(row['errors']) if v == '1']
+                    fallback.setdefault(key, []).append(row)
     except FileNotFoundError:
         print("⚠️  No existing CSV found. Will not use fallback.")
     return fallback
@@ -145,11 +147,15 @@ def main():
     for row in results:
         key  = row["file_name"].split("_TVOON_")[0]
         row['n_cutlists'] = 0
+        row['all_errors'] = []
         if key in cutlist_entries:
+            for entry in cutlist_entries[key]:
+                row['all_errors'].extend(entry['errors'])
             row['n_cutlists'] = len(cutlist_entries[key])
+        row['all_errors'] = '/'.join(sorted(set(row['all_errors'])))
 
     with open("otrkey_files.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=["mirror_name", "file_name", "n_cutlists"])
+        writer = csv.DictWriter(f, fieldnames=["mirror_name", "file_name", "n_cutlists", "all_errors"])
         writer.writeheader()
         writer.writerows(results)
 
