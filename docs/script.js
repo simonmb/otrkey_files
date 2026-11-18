@@ -160,6 +160,7 @@
     ).map((i) => i.value);
 
     const filtered = files.filter(({ parsed, file_name, mirror_name }) => {
+      if (!parsed) return false; // skip filenames the parser does not understand
       const matchesQuery =
         (parsed && normalize(parsed.title).includes(term)) ||
         normalize(file_name).includes(term);
@@ -197,7 +198,7 @@
       });
     }
 
-    const formatOrder = ["mp3", "ac3", "mp4", "avi", "HQ", "HD"];
+    const formatOrder = ["mp3", "ac3", "mp4", "LQ", "avi", "HQ", "HD"];
 
     const sortedGroups = Array.from(groups.entries()).sort(
       ([keyA], [keyB]) => keyA.localeCompare(keyB)
@@ -324,7 +325,7 @@
   // ----------------------------
   function parseOtrkeyFilename(filename) {
     const pattern =
-      /^(?<title>.+?)(?:_S(?<season>\d{2})E(?<episode>\d{2}))?_(?<date>\d{2}\.\d{2}\.\d{2})_(?<time>\d{2}-\d{2})_(?<channel>[a-z0-9]+)_(?<duration>\d+)_TVOON_DE\.mpg(?:\.(?<quality>HQ|HD))?(?:\.fra)?(?:\.auto)?(?:\.cut)?\.(?:(?<video_format>avi|mp4)|(?<audio_format>ac3|mp3))\.otrkey$/i;
+      /^(?<title>.+?)(?:_S(?<season>\d{2})E(?<episode>\d{2}))?_(?<date>\d{2}\.\d{2}\.\d{2})_(?<time>\d{2}-\d{2})_(?<channel>[a-z0-9]+)_(?<duration>\d+)_TVOON_DE\.mpg(?:\.(?<quality>HQ|HD|LQ))?(?:\.fra)?(?:\.auto)?(?:\.cut)?\.(?:(?<video_format>avi|mp4)|(?<audio_format>ac3|mp3))\.otrkey$/i;
 
     const match = filename.match(pattern);
     if (!match || !match.groups) {
