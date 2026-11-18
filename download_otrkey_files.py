@@ -16,7 +16,7 @@ def parse_otrkey_filename(filename: str):
         _(?P<channel>[a-z0-9]+)
         _(?P<duration>\d+)
         _TVOON_DE\.mpg
-        (?:\.(?P<quality>HQ|HD))?
+        (?:\.(?P<quality>HQ|HD|LQ))?
         (?:\.fra)?
         (?:\.auto)?
         (?:\.cut)?
