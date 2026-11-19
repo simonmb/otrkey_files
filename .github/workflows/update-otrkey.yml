@@ -43,25 +43,30 @@ jobs:
       - name: Run OTRKey fetch script (write to temp)
         run: |
           python download_otrkey_files.py
-          # Save new CSV and create zip version
+          # Save new CSVs and create zip version
           cp otrkey_files.csv /tmp/otrkey_files.new.csv
+          cp cutlists.csv.gz /tmp/cutlists.new.csv.gz
           zip -j /tmp/otrkey_files.zip otrkey_files.csv
 
-      - name: Remove ALL history of otrkey_files.csv (keep code history)
+      - name: Remove ALL history of the data files (keep code history)
         run: |
-          git-filter-repo --force --path otrkey_files.csv --path otrkey_files.zip --invert-paths
+          git-filter-repo --force --path otrkey_files.csv --path otrkey_files.zip \
+            --path cutlists.csv --path cutlists.csv.gz --invert-paths
 
-      - name: Restore fresh CSV and commit
+      - name: Restore fresh CSVs and commit
         run: |
           cp /tmp/otrkey_files.new.csv otrkey_files.csv
           cp /tmp/otrkey_files.zip otrkey_files.zip
-          git add otrkey_files.csv otrkey_files.zip
+          cp /tmp/cutlists.new.csv.gz cutlists.csv.gz
+          git add otrkey_files.csv otrkey_files.zip cutlists.csv.gz
           git commit -m "⬇️ Update otrkey_files" || echo "No changes to commit."
 
-      - name: Push rewritten history
+      - name: Push rewritten history (keeping files pushed while this job ran)
         env:
           REPO: ${{ github.repository }}
           PAT: ${{ secrets.PERSONAL_TOKEN }}
+          # files other scripts push (e.g. watch_landing.py); space separated
+          KEEP: cutlists/landing_newest.json
         run: |
           URL="https://x-access-token:${PAT}@github.com/${REPO}.git"
           if git remote | grep -q '^origin$'; then
@@ -71,7 +76,27 @@ jobs:
           fi
           # Push to the current branch (works on main or others)
           CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-          git push --force --no-tags origin "HEAD:${CURRENT_BRANCH}"
+          for attempt in 1 2 3 4 5; do
+            # The commit on GitHub right now. KEEP files are taken from it, so a push that
+            # happened after our checkout is not overwritten by the force push below.
+            REMOTE_SHA="$(git ls-remote origin "refs/heads/${CURRENT_BRANCH}" | cut -f1)"
+            for f in $KEEP; do
+              if curl -sfL -H "Authorization: Bearer ${PAT}" -H "Accept: application/vnd.github.raw" \
+                   "https://api.github.com/repos/${REPO}/contents/${f}?ref=${REMOTE_SHA}" -o /tmp/keep.tmp; then
+                mkdir -p "$(dirname "$f")"
+                mv /tmp/keep.tmp "$f"
+                git add "$f"
+              fi
+            done
+            git commit -m "Keep files pushed during the update" || true
+            # Force push, but only if GitHub still has REMOTE_SHA; otherwise read KEEP again
+            if git push --force-with-lease="${CURRENT_BRANCH}:${REMOTE_SHA}" --no-tags origin "HEAD:${CURRENT_BRANCH}"; then
+              exit 0
+            fi
+            echo "Branch changed while pushing, retrying (${attempt}/5)"
+            sleep 10
+          done
+          exit 1
       #- name: Purge jsDelivr cache
       #  uses: gacts/purge-jsdelivr-cache@v1
       #  with:
