@@ -1,4 +1,4 @@
-name: Update otrkey files every 30 min
+name: Update otrkey files and cutlists
 
 on:
   schedule:
@@ -8,8 +8,12 @@ on:
 permissions:
   contents: write
 
+concurrency:  # never two runs at once (e.g. a manual and a scheduled one)
+  group: update-data
+  cancel-in-progress: false
+
 jobs:
-  clean_and_update_csv:
+  update:
     runs-on: ubuntu-latest
     env:
       API_KEY: ${{ secrets.API_KEY }}
@@ -19,87 +23,43 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: false  # we'll set our own remote with PAT
-
-      - name: Configure Git author
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
+          persist-credentials: false  # we push with our own token
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
 
-      - name: Install runtime deps
-        run: |
-          pip install requests
+      - name: Install dependencies
+        run: pip install requests git-filter-repo
 
-      - name: Install git-filter-repo
-        run: |
-          curl -sSL https://cdn.jsdelivr.net/gh/newren/git-filter-repo/git-filter-repo > /usr/local/bin/git-filter-repo
-          chmod +x /usr/local/bin/git-filter-repo
-
-      - name: Run OTRKey fetch script (write to temp)
+      - name: Update cutlists and fetch the mirror file lists
         run: |
           python download_otrkey_files.py
-          # Save new CSVs and create zip version
-          cp otrkey_files.csv /tmp/otrkey_files.new.csv
-          cp cutlists.csv.gz /tmp/cutlists.new.csv.gz
-          zip -j /tmp/otrkey_files.zip otrkey_files.csv
+          mkdir /tmp/data
+          cp otrkey_files.csv cutlists.csv.gz /tmp/data/
+          zip -j /tmp/data/otrkey_files.zip otrkey_files.csv
 
-      - name: Remove ALL history of the data files (keep code history)
+      - name: Remove the history of the data files (keep code history)
         run: |
-          git-filter-repo --force --path otrkey_files.csv --path otrkey_files.zip \
-            --path cutlists.csv --path cutlists.csv.gz --invert-paths
+          echo "BASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          git-filter-repo --force --invert-paths \
+            --path otrkey_files.csv --path otrkey_files.zip \
+            --path cutlists.csv --path cutlists.csv.gz
 
-      - name: Restore fresh CSVs and commit
+      - name: Commit the fresh data files
         run: |
-          cp /tmp/otrkey_files.new.csv otrkey_files.csv
-          cp /tmp/otrkey_files.zip otrkey_files.zip
-          cp /tmp/cutlists.new.csv.gz cutlists.csv.gz
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          cp /tmp/data/* .
           git add otrkey_files.csv otrkey_files.zip cutlists.csv.gz
           git commit -m "⬇️ Update otrkey_files" || echo "No changes to commit."
 
-      - name: Push rewritten history (keeping files pushed while this job ran)
+      - name: Push rewritten history
         env:
-          REPO: ${{ github.repository }}
           PAT: ${{ secrets.PERSONAL_TOKEN }}
-          # files other scripts push (e.g. watch_landing.py); space separated
-          KEEP: cutlists/landing_newest.json
         run: |
-          URL="https://x-access-token:${PAT}@github.com/${REPO}.git"
-          if git remote | grep -q '^origin$'; then
-            git remote set-url origin "$URL"
-          else
-            git remote add origin "$URL"
-          fi
-          # Push to the current branch (works on main or others)
-          CURRENT_BRANCH="$(git rev-parse --abbrev-ref HEAD)"
-          for attempt in 1 2 3 4 5; do
-            # The commit on GitHub right now. KEEP files are taken from it, so a push that
-            # happened after our checkout is not overwritten by the force push below.
-            REMOTE_SHA="$(git ls-remote origin "refs/heads/${CURRENT_BRANCH}" | cut -f1)"
-            for f in $KEEP; do
-              if curl -sfL -H "Authorization: Bearer ${PAT}" -H "Accept: application/vnd.github.raw" \
-                   "https://api.github.com/repos/${REPO}/contents/${f}?ref=${REMOTE_SHA}" -o /tmp/keep.tmp; then
-                mkdir -p "$(dirname "$f")"
-                mv /tmp/keep.tmp "$f"
-                git add "$f"
-              fi
-            done
-            git commit -m "Keep files pushed during the update" || true
-            # Force push, but only if GitHub still has REMOTE_SHA; otherwise read KEEP again
-            if git push --force-with-lease="${CURRENT_BRANCH}:${REMOTE_SHA}" --no-tags origin "HEAD:${CURRENT_BRANCH}"; then
-              exit 0
-            fi
-            echo "Branch changed while pushing, retrying (${attempt}/5)"
-            sleep 10
-          done
-          exit 1
-      #- name: Purge jsDelivr cache
-      #  uses: gacts/purge-jsdelivr-cache@v1
-      #  with:
-      #    url: |
-      #      https://cdn.jsdelivr.net/gh/simonmb/otrkey_files@main/otrkey_files.zip
-      #      https://cdn.jsdelivr.net/gh/simonmb/otrkey_files@main/mirrors.json
+          # Replace the branch only if nobody pushed since our checkout; otherwise
+          # this run fails without overwriting anything and the next run catches up.
+          git push --force-with-lease="${GITHUB_REF_NAME}:${BASE_SHA}" --no-tags \
+            "https://x-access-token:${PAT}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:${GITHUB_REF_NAME}"

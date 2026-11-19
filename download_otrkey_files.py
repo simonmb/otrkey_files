@@ -300,7 +300,7 @@ def load_existing_entries(mode="otrkey"):
                     row['errors'] = [error_flags[i] for i, v in enumerate(row['errors']) if v == '1']
                     fallback.setdefault(key, []).append(row)
     except FileNotFoundError:
-        print("⚠️  No existing CSV found. Will not use fallback.")
+        print("No existing CSV found. Will not use fallback.")
     return fallback
 
 
@@ -337,7 +337,7 @@ def main():
         writer.writeheader()
         writer.writerows(results)
 
-    print(f"✅ Done. {len(results)} entries saved to 'otrkey_files.csv'.")
+    print(f"Done. {len(results)} entries saved to 'otrkey_files.csv'.")
 
 
 if __name__ == "__main__":
