@@ -1,195 +1,547 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>otrkey file search</title>
+    <meta name="description" content="Search otrkey / otr2 files across OTR mirror sites." />
+    <link rel="icon" href="favicon.ico" />
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
-
-    <!-- Bootstrap 5 CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
-        crossorigin="anonymous" />
-
     <style>
+        :root {
+            --bg: #f6f4ef;
+            --surface: #ffffff;
+            --surface-2: #faf9f6;
+            --ink: #1c1d22;
+            --muted: #6b6e78;
+            --line: #e6e2d9;
+            --brand: #2563eb;
+            --brand-hover: #1d4ed8;
+            --brand-ink: #ffffff;
+            --brand-soft: #e6eefc;
+            --brand-soft-ink: #1e40af;
+            --warn: #b45309;
+            --ok: #0f766e;
+            --shadow: 0 1px 2px rgba(29, 27, 38, .06), 0 4px 16px rgba(29, 27, 38, .05);
+            --radius: 14px;
+            --f-hd: #6d28d9;
+            --f-hq: #0e7490;
+            --f-lq: #64748b;
+            --f-sd: #78716c;
+            --f-mp4: #57534e;
+            --f-audio: #b45309;
+            --f-addon: #be185d;
+            color-scheme: light;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --bg: #121418;
+                --surface: #1a1d23;
+                --surface-2: #20242b;
+                --ink: #e9ebf0;
+                --muted: #9aa1ad;
+                --line: #2b3039;
+                --brand: #7aa7f7;
+                --brand-hover: #9dbefa;
+                --brand-ink: #0f1115;
+                --brand-soft: #1b2741;
+                --brand-soft-ink: #c3d6fb;
+                --warn: #f59e0b;
+                --ok: #2dd4bf;
+                --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+                --f-hd: #a78bfa;
+                --f-hq: #22d3ee;
+                --f-lq: #94a3b8;
+                --f-sd: #a8a29e;
+                --f-mp4: #d6d3d1;
+                --f-audio: #fbbf24;
+                --f-addon: #f472b6;
+                color-scheme: dark;
+            }
+        }
+
+        :root[data-theme="dark"] {
+            --bg: #121418;
+            --surface: #1a1d23;
+            --surface-2: #20242b;
+            --ink: #e9ebf0;
+            --muted: #9aa1ad;
+            --line: #2b3039;
+            --brand: #7aa7f7;
+            --brand-hover: #9dbefa;
+            --brand-ink: #0f1115;
+            --brand-soft: #1b2741;
+            --brand-soft-ink: #c3d6fb;
+            --warn: #f59e0b;
+            --ok: #2dd4bf;
+            --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+            --f-hd: #a78bfa;
+            --f-hq: #22d3ee;
+            --f-lq: #94a3b8;
+            --f-sd: #a8a29e;
+            --f-mp4: #d6d3d1;
+            --f-audio: #fbbf24;
+            --f-addon: #f472b6;
+            color-scheme: dark;
+        }
+
+        * { box-sizing: border-box; }
+        [hidden] { display: none !important; }
+
+        html { -webkit-text-size-adjust: 100%; }
+
         body {
-            background-color: #f8f9fa;
-            color: #343a40;
-            font-family: "Segoe UI", sans-serif;
+            margin: 0;
+            background: var(--bg);
+            color: var(--ink);
+            font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
 
-        .search-input {
-            position: relative;
-        }
+        button, input, select { font: inherit; color: inherit; }
+        a { color: var(--brand); }
+        .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-        .search-input input {
-            padding-left: 2.5rem;
-            border-radius: 2rem;
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.125);
-            transition: box-shadow 0.2s ease-in-out;
+        /* ---------- header ---------- */
+        .topbar {
+            display: flex; align-items: center; gap: 12px;
+            max-width: 1240px; margin: 0 auto; padding: 14px 20px;
         }
+        .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); }
+        .brand-mark {
+            width: 34px; height: 34px; border-radius: 10px; background: var(--brand);
+            display: grid; place-items: center; color: var(--brand-ink);
+        }
+        .brand-name { font-weight: 700; font-size: 17px; letter-spacing: -.01em; }
+        .brand-name span { color: var(--brand); }
+        .spacer { flex: 1; }
+        .data-pill {
+            font-size: 12.5px; color: var(--muted); border: 1px solid var(--line);
+            background: var(--surface); border-radius: 999px; padding: 4px 10px; white-space: nowrap;
+        }
+        .icon-btn {
+            border: 1px solid var(--line); background: var(--surface); border-radius: 10px;
+            height: 34px; min-width: 34px; padding: 0 9px; cursor: pointer; display: inline-grid; place-items: center;
+            font-size: 13px; font-weight: 600;
+        }
+        .icon-btn:hover { border-color: var(--brand); color: var(--brand); }
 
-        .search-input:hover input {
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+        /* ---------- accent color picker ---------- */
+        .accent-wrap { position: relative; }
+        .accent-dot { width: 16px; height: 16px; border-radius: 50%; background: var(--brand); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .3); }
+        .accent-pop {
+            position: absolute; right: 0; top: 42px; z-index: 60; width: 236px; padding: 12px;
+            background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+            box-shadow: var(--shadow), 0 12px 32px rgba(0, 0, 0, .14);
         }
+        .accent-pop h3 { margin: 0 0 10px; font-size: 13px; font-weight: 600; color: var(--muted); }
+        .swatches { display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px; }
+        .swatch { aspect-ratio: 1; border-radius: 50%; border: 0; padding: 0; cursor: pointer; }
+        .swatch:hover { transform: scale(1.08); }
+        .swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
+        .accent-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; font-size: 13.5px; }
+        .accent-row label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .accent-row input[type="color"] {
+            width: 34px; height: 28px; padding: 2px; border: 1px solid var(--line); border-radius: 7px;
+            background: var(--surface); cursor: pointer;
+        }
+        .accent-row input[type="color"][aria-pressed="true"] { border-color: var(--ink); }
 
-        .search-input .search-icon {
-            position: absolute;
-            left: 0.9rem;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 1.2rem;
-            color: #6c757d;
+        /* ---------- hero ---------- */
+        .hero { max-width: 1240px; margin: 0 auto; padding: 18px 20px 8px; }
+        .hero h1 { margin: 0 0 4px; font-size: clamp(22px, 3.2vw, 30px); letter-spacing: -.02em; }
+        .hero p.lead { margin: 0 0 16px; color: var(--muted); }
+        .searchbox {
+            position: relative; display: flex; align-items: center;
+            background: var(--surface); border: 2px solid var(--line); border-radius: 16px;
+            box-shadow: var(--shadow); transition: border-color .15s;
         }
+        .searchbox:focus-within { border-color: var(--brand); }
+        .searchbox svg { position: absolute; left: 16px; color: var(--muted); pointer-events: none; }
+        .searchbox input {
+            flex: 1; min-width: 0; border: 0; outline: 0; background: transparent;
+            padding: 15px 8px 15px 50px; font-size: 17px;
+        }
+        .searchbox .kbd {
+            font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px;
+            padding: 1px 7px; margin-right: 8px;
+        }
+        .clear-btn {
+            border: 0; background: transparent; cursor: pointer; color: var(--muted);
+            width: 36px; height: 36px; border-radius: 10px; font-size: 20px; line-height: 1; margin-right: 6px;
+        }
+        .clear-btn:hover { background: var(--surface-2); color: var(--ink); }
+        .hint { font-size: 13px; color: var(--muted); margin: 8px 2px 0; }
+        .hint code { background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; font-size: 12px; }
 
-        .list-group-item {
-            transition: background 0.1s ease-in-out;
+        .quick { display: flex; gap: 8px; margin: 14px 0 4px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+        .chip {
+            border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+            border-radius: 999px; padding: 6px 13px; cursor: pointer; white-space: nowrap; font-size: 14px;
+            transition: background .12s, border-color .12s;
         }
+        .chip:hover { border-color: var(--brand); }
+        .chip[aria-pressed="true"] { background: var(--brand); border-color: var(--brand); color: var(--brand-ink); }
+        .chip.sm { padding: 4px 10px; font-size: 13px; }
 
-        .list-group-item:hover {
-            background-color: #eef4fc;
-        }
+        .progress { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; margin-top: 14px; }
+        .progress > div { height: 100%; width: 0; background: var(--brand); transition: width .2s; }
+        .status-line { font-size: 13px; color: var(--muted); margin-top: 6px; }
 
-        .no-results {
-            color: #6c757d;
-            font-style: italic;
+        /* ---------- layout ---------- */
+        .layout {
+            max-width: 1240px; margin: 0 auto; padding: 12px 20px 40px;
+            display: grid; grid-template-columns: 290px minmax(0, 1fr); gap: 22px; align-items: start;
         }
+        aside.filters {
+            position: sticky; top: 14px; max-height: calc(100vh - 28px); overflow: auto;
+            background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+        .filters-head {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+            padding: 14px 16px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface); z-index: 1;
+        }
+        .filters-head h2 { font-size: 15px; margin: 0; }
+        .link-btn { border: 0; background: none; color: var(--brand); cursor: pointer; padding: 2px 4px; font-size: 13.5px; }
+        .link-btn:disabled { color: var(--muted); cursor: default; opacity: .6; }
+        .fsec { padding: 14px 16px; border-bottom: 1px solid var(--line); }
+        .fsec:last-child { border-bottom: 0; }
+        .fsec h3 {
+            margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .row2.dates { grid-template-columns: 1fr; }
+        .row2.dates .field { display: grid; grid-template-columns: 40px 1fr; align-items: center; }
+        .row2.dates .field label { margin: 0; }
+        .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+        .input {
+            width: 100%; border: 1px solid var(--line); background: var(--surface-2); border-radius: 9px;
+            padding: 7px 9px; outline: 0; min-width: 0;
+        }
+        .input:focus { border-color: var(--brand); }
+        .checklist { max-height: 220px; overflow: auto; margin-top: 8px; display: grid; gap: 1px; }
+        .checklist label {
+            display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 7px; cursor: pointer; font-size: 14px;
+        }
+        .checklist label:hover { background: var(--surface-2); }
+        .checklist input { accent-color: var(--brand); margin: 0; }
+        .checklist .count { margin-left: auto; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+        .muted { color: var(--muted); }
+        .small { font-size: 12.5px; }
 
-        /* Hidden message shown only during search */
-        #searching {
-            color: #6c757d;
-            font-style: italic;
-            margin-bottom: 1rem;
+        /* dual range */
+        .dual { position: relative; height: 30px; margin: 6px 4px 4px; }
+        .dual .track { position: absolute; left: 0; right: 0; top: 13px; height: 4px; border-radius: 4px; background: var(--line); }
+        .dual .fill { position: absolute; top: 13px; height: 4px; border-radius: 4px; background: var(--brand); }
+        .dual input[type=range] {
+            position: absolute; left: 0; right: 0; top: 4px; width: 100%; margin: 0;
+            background: none; pointer-events: none; -webkit-appearance: none; appearance: none; height: 22px;
         }
+        .dual input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; pointer-events: auto; width: 18px; height: 18px; border-radius: 50%;
+            background: var(--surface); border: 3px solid var(--brand); cursor: pointer;
+        }
+        .dual input[type=range]::-moz-range-thumb {
+            pointer-events: auto; width: 14px; height: 14px; border-radius: 50%;
+            background: var(--surface); border: 3px solid var(--brand); cursor: pointer;
+        }
+        .dual input[type=range]::-moz-range-track { background: none; }
 
-        #scrollToTopBtn {
-            display: none;
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            z-index: 1000;
-            width: 50px;
-            height: 50px;
-            border: none;
-            border-radius: 50%;
-            background-color: #007bff;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15);
-            transition: background-color 0.3s ease, transform 0.2s ease;
+        /* ---------- results ---------- */
+        .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+        .toolbar h2 { margin: 0; font-size: 17px; }
+        .toolbar .count { color: var(--muted); font-size: 14px; }
+        .sortbox { display: flex; gap: 6px; align-items: center; margin-left: auto; }
+        .sortbox select { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 6px 8px; }
+        .filter-toggle { display: none; }
+        .active-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+        .active-filters:empty { display: none; }
+        .af {
+            display: inline-flex; align-items: center; gap: 4px; font-size: 13px; background: var(--brand-soft); color: var(--brand-soft-ink);
+            border: 0; border-radius: 999px; padding: 3px 6px 3px 10px; cursor: pointer;
         }
+        .af b { font-weight: 400; font-size: 15px; line-height: 1; padding: 0 3px; }
+        .af:hover { filter: brightness(.96); }
 
-        #scrollToTopBtn:hover {
-            background-color: #0056b3;
-            transform: scale(1.1);
+        .results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+        .card {
+            background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+            box-shadow: var(--shadow); overflow: hidden;
         }
+        .card.open { border-color: var(--brand); }
+        .card-main {
+            display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 14px; align-items: center;
+            width: 100%; text-align: left; border: 0; background: none; padding: 12px 14px; cursor: pointer;
+        }
+        .card-main:hover { background: var(--surface-2); }
+        .datebox {
+            text-align: center; border-radius: 11px; background: var(--brand-soft); color: var(--brand-soft-ink); padding: 6px 2px; line-height: 1.15;
+        }
+        .datebox .wd { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+        .datebox .dm { font-size: 17px; font-weight: 700; }
+        .datebox .yr { font-size: 11px; opacity: .8; }
+        .title { font-weight: 650; font-size: 15.5px; overflow-wrap: anywhere; }
+        .ep { font-weight: 500; color: var(--muted); margin-left: 6px; font-size: 13.5px; }
+        .meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 13.5px; margin-top: 3px; align-items: center; }
+        .chan { text-transform: uppercase; font-weight: 600; letter-spacing: .03em; color: var(--ink); font-size: 12.5px; }
+        .tag-cut { color: var(--ok); }
+        .tag-warn { color: var(--warn); }
+        .badges { display: flex; flex-wrap: wrap; gap: 5px; justify-content: flex-end; max-width: 220px; }
+        .fbadge {
+            font-size: 11.5px; font-weight: 700; letter-spacing: .02em; border-radius: 6px; padding: 2px 7px;
+            color: var(--fc); background: color-mix(in srgb, var(--fc) 14%, transparent); border: 1px solid color-mix(in srgb, var(--fc) 35%, transparent);
+            white-space: nowrap;
+        }
+        .chev { color: var(--muted); transition: transform .15s; margin-left: 4px; }
+        .card.open .chev { transform: rotate(180deg); }
+
+        .details { border-top: 1px solid var(--line); background: var(--surface-2); padding: 12px 14px 14px; }
+        .dfile {
+            display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 10px; align-items: start;
+            padding: 10px 0; border-bottom: 1px dashed var(--line);
+        }
+        .dfile:last-of-type { border-bottom: 0; }
+        .fname {
+            font: 12.5px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; color: var(--muted); overflow-wrap: anywhere;
+            display: flex; gap: 6px; align-items: flex-start;
+        }
+        .copy-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 6px; cursor: pointer; padding: 0 6px; font-size: 12px; flex: none; }
+        .copy-btn:hover { border-color: var(--brand); color: var(--brand); }
+        .mirrors { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+        .mbtn {
+            display: inline-flex; align-items: center; gap: 6px; text-decoration: none; font-size: 13.5px; font-weight: 600;
+            background: var(--brand); color: var(--brand-ink); border-radius: 9px; padding: 6px 11px;
+        }
+        .mbtn:hover { background: var(--brand-hover); }
+        .dactions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+        .ghost {
+            border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 6px 11px; cursor: pointer;
+            text-decoration: none; color: var(--ink); font-size: 13.5px;
+        }
+        .ghost:hover { border-color: var(--brand); color: var(--brand); }
+        .ctag { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 5px; padding: 0 5px; margin-top: 4px; display: inline-block; }
+
+        .empty {
+            text-align: center; padding: 40px 20px; color: var(--muted); background: var(--surface);
+            border: 1px dashed var(--line); border-radius: var(--radius);
+        }
+        .empty strong { display: block; color: var(--ink); font-size: 16px; margin-bottom: 4px; }
+        .more { display: block; margin: 16px auto 0; }
+        .skeleton { height: 76px; border-radius: var(--radius); background: linear-gradient(90deg, var(--surface) 0%, var(--surface-2) 50%, var(--surface) 100%); background-size: 200% 100%; animation: sh 1.2s infinite; border: 1px solid var(--line); }
+        @keyframes sh { to { background-position: -200% 0; } }
+
+        footer { max-width: 1240px; margin: 0 auto; padding: 10px 20px 40px; color: var(--muted); font-size: 13px; }
+
+        .toast {
+            position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%) translateY(20px); opacity: 0;
+            background: var(--ink); color: var(--bg); padding: 8px 14px; border-radius: 10px; font-size: 14px;
+            transition: all .2s; pointer-events: none; z-index: 50;
+        }
+        .toast.show { opacity: 1; transform: translateX(-50%); }
+        #toTop {
+            position: fixed; right: 20px; bottom: 20px; width: 44px; height: 44px; border-radius: 50%;
+            border: 0; background: var(--brand); color: var(--brand-ink); font-size: 20px; cursor: pointer;
+            box-shadow: var(--shadow); display: none; z-index: 20;
+        }
+        .backdrop { display: none; }
+
+        /* ---------- mobile ---------- */
+        @media (max-width: 900px) {
+            .layout { grid-template-columns: 1fr; padding: 8px 16px 40px; }
+            .topbar, .hero, footer { padding-left: 16px; padding-right: 16px; }
+            .data-pill { display: none; }
+            .searchbox .kbd { display: none; }
+            .filter-toggle { display: inline-flex; }
+            aside.filters {
+                position: fixed; z-index: 40; left: 0; right: 0; bottom: 0; top: auto; max-height: 85vh;
+                border-radius: 18px 18px 0 0; transform: translateY(105%); transition: transform .22s ease;
+            }
+            body.drawer-open aside.filters { transform: none; }
+            body.drawer-open .backdrop { display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, .4); z-index: 39; }
+            .card-main { grid-template-columns: 54px minmax(0, 1fr); gap: 11px; }
+            .card-main .badges { grid-column: 2; justify-content: flex-start; max-width: none; }
+            .sortbox { margin-left: 0; width: 100%; }
+            .sortbox select { flex: 1; }
+            .dfile { grid-template-columns: 1fr; gap: 4px; }
+        }
+        .drawer-close { display: none; }
+        @media (max-width: 900px) { .drawer-close { display: inline-block; } }
     </style>
+    <script>
+        // apply saved settings before the first paint (no flash of the default colors)
+        try {
+            var css = localStorage.getItem("accentCss");
+            if (css) {
+                var st = document.createElement("style");
+                st.id = "accentStyle";
+                st.textContent = css;
+                document.head.appendChild(st);
+            }
+            var th = localStorage.getItem("theme");
+            if (th === "light" || th === "dark") document.documentElement.dataset.theme = th;
+        } catch (e) { /* storage blocked: defaults */ }
+    </script>
 </head>
 
 <body>
-    <div class="container py-5">
-        <div class="mb-4 text-center">
-            <h1>otrkey file search</h1>
-            <p class="text-muted">Type your query and press <strong>Enter</strong> (ignores underscores)</p>
-        </div>
-
-        <div class="row justify-content-center mb-4">
-            <div class="col-md-7">
-
-                <div class="row justify-content-center mb-3">
-                    <div class="col-md-7 d-flex gap-3 flex-wrap">
-                        <!-- Format Filter -->
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary dropdown-toggle" type="button"
-                                data-bs-toggle="dropdown" aria-expanded="false">
-                                Format
-                            </button>
-                            <ul class="dropdown-menu p-2" id="formatFilter">
-                                <li><label><input type="checkbox" value="mp3" class="form-check-input me-2">mp3</label>
-                                </li>
-                                <li><label><input type="checkbox" value="ac3" class="form-check-input me-2">ac3</label>
-                                </li>
-                                <li><label><input type="checkbox" value="mp4" class="form-check-input me-2">mp4</label>
-                                </li>
-                                <li><label><input type="checkbox" value="LQ" class="form-check-input me-2">LQ</label>
-                                </li>
-                                <li><label><input type="checkbox" value="avi" class="form-check-input me-2">avi</label>
-                                </li>
-                                <li><label><input type="checkbox" value="HQ" class="form-check-input me-2">HQ</label>
-                                </li>
-                                <li><label><input type="checkbox" value="HD" class="form-check-input me-2">HD</label>
-                                </li>
-                            </ul>
-                        </div>
-
-                        <!-- Mirror Filter -->
-                        <div class="dropdown">
-                            <button class="btn btn-outline-secondary dropdown-toggle" type="button"
-                                data-bs-toggle="dropdown" aria-expanded="false" style="min-width: 300px;">
-                                Mirror
-                            </button>
-                            <ul class="dropdown-menu p-2" id="mirrorFilter" style="min-width: 300px;">
-                                <!-- JS will populate this dynamically -->
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="search-input">
-                    <span class="search-icon">🔍</span>
-                    <input type="text" id="search" class="form-control form-control-lg" placeholder="Search files..."
-                        aria-label="Filename search input" />
+    <header class="topbar">
+        <a class="brand" href="#" id="homeLink">
+            <span class="brand-mark" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><rect x="3" y="5" width="14" height="12" rx="2"/><path d="M7 5v12M13 5v12M3 9h4M3 13h4M13 9h4M13 13h4"/><circle cx="18" cy="17" r="3.2" fill="currentColor" stroke="none" opacity=".35"/><path d="M20.4 19.4 22 21"/></svg>
+            </span>
+            <span class="brand-name">otrkey <span>search</span></span>
+        </a>
+        <div class="spacer"></div>
+        <span class="data-pill" id="dataPill" hidden></span>
+        <div class="accent-wrap">
+            <button class="icon-btn" id="accentBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="accentPop">
+                <span class="accent-dot" aria-hidden="true"></span>
+            </button>
+            <div class="accent-pop" id="accentPop" hidden>
+                <h3 data-i18n="accentTitle">Akzentfarbe</h3>
+                <div class="swatches" id="swatches"></div>
+                <div class="accent-row">
+                    <label><input type="color" id="accentCustom" value="#2563eb" /> <span data-i18n="accentCustom">Eigene Farbe</span></label>
+                    <button class="link-btn" type="button" id="accentReset" data-i18n="accentReset">Standard</button>
                 </div>
             </div>
         </div>
+        <button class="icon-btn" id="langBtn" type="button" title="Sprache / Language">EN</button>
+        <button class="icon-btn" id="themeBtn" type="button" aria-label="Theme">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
+    </header>
 
-        <div class="progress mb-3 text-center" style="height: 20px; display: none;" id="progressWrapper">
-            Loading database of otrkey files...
-            <div id="progressBar" class="progress-bar" role="progressbar" style="width: 0%">0%</div>
+    <section class="hero">
+        <h1 data-i18n="heroTitle">Aufnahmen finden</h1>
+        <p class="lead" data-i18n="heroLead">Durchsucht die Dateilisten aller bekannten OTR-Mirrors – otrkey und otr2.</p>
+
+        <form class="searchbox" id="searchForm" role="search" autocomplete="off">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <label for="search" class="sr-only" data-i18n="searchLabel">Suche</label>
+            <input type="search" id="search" data-i18n-ph="searchPh" placeholder="Titel, Serie oder Sender…" enterkeyhint="search" />
+            <span class="kbd" title="Taste /">/</span>
+            <button type="button" class="clear-btn" id="clearSearch" aria-label="Clear" hidden>×</button>
+        </form>
+        <p class="hint" data-i18n-html="hint">Tipp: mehrere Wörter in beliebiger Reihenfolge, z.&nbsp;B. <code>tatort münster</code>, <code>simpsons s05e03</code> oder <code>arte doku</code>.</p>
+
+        <div class="quick" id="quick" role="toolbar" aria-label="Quick filters"></div>
+
+        <div id="loading">
+            <div class="progress"><div id="progressBar"></div></div>
+            <div class="status-line" id="statusLine" data-i18n="loading">Lade Datenbank…</div>
         </div>
+    </section>
 
-        <div id="searching" class="text-center d-none">
-            Searching...
-        </div>
+    <div class="layout">
+        <aside class="filters" id="filters" aria-label="Filter">
+            <div class="filters-head">
+                <h2><span data-i18n="filters">Filter</span> <span class="muted small" id="activeCount"></span></h2>
+                <div>
+                    <button class="link-btn" id="resetBtn" type="button" data-i18n="reset">Zurücksetzen</button>
+                    <button class="link-btn drawer-close" id="drawerClose" type="button">Fertig</button>
+                </div>
+            </div>
 
-        <ul id="results" class="list-group shadow-sm">
-        </ul>
+            <div class="fsec">
+                <h3 data-i18n="period">Zeitraum</h3>
+                <div class="chips" id="periodChips"></div>
+                <div class="row2 dates" style="margin-top:10px">
+                    <div class="field"><label for="fromDate" data-i18n="from">Von</label><input class="input" type="date" id="fromDate" /></div>
+                    <div class="field"><label for="toDate" data-i18n="to">Bis</label><input class="input" type="date" id="toDate" /></div>
+                </div>
+            </div>
 
-        <div id="no-results" class="no-results text-center mt-3 d-none">
-            No matching files found.
-        </div>
+            <div class="fsec">
+                <h3 data-i18n="quality">Qualität</h3>
+                <div class="chips" id="qualityChips"></div>
+            </div>
+
+            <div class="fsec">
+                <h3 data-i18n="type">Art</h3>
+                <div class="chips" id="typeChips"></div>
+                <p class="muted small" style="margin:8px 0 0" data-i18n="typeNote">Automatisch erkannt aus Titel, Folge und Dauer.</p>
+            </div>
+
+            <div class="fsec">
+                <h3><span data-i18n="duration">Dauer</span> <span class="small" id="durLabel" style="text-transform:none;letter-spacing:0"></span></h3>
+                <div class="dual" id="dual">
+                    <div class="track"></div>
+                    <div class="fill" id="durFill"></div>
+                    <input type="range" id="durMin" min="0" max="300" step="5" value="0" aria-label="Min" />
+                    <input type="range" id="durMax" min="0" max="300" step="5" value="300" aria-label="Max" />
+                </div>
+                <div class="row2" style="margin:6px 0 10px">
+                    <div class="field"><label for="durMinN">Min.</label><input class="input" type="number" id="durMinN" min="0" max="300" step="5" value="0" /></div>
+                    <div class="field"><label for="durMaxN">Max.</label><input class="input" type="number" id="durMaxN" min="0" max="300" step="5" value="300" /></div>
+                </div>
+                <div class="chips" id="durChips"></div>
+            </div>
+
+            <div class="fsec">
+                <h3><span data-i18n="channels">Sender</span> <button class="link-btn" id="chanClear" type="button" hidden data-i18n="clear">leeren</button></h3>
+                <input class="input" type="search" id="chanSearch" data-i18n-ph="chanPh" placeholder="Sender suchen…" />
+                <div class="checklist" id="chanList"></div>
+            </div>
+
+            <div class="fsec">
+                <h3 data-i18n="more">Weitere</h3>
+                <div class="chips">
+                    <button class="chip sm" type="button" id="cutChip" aria-pressed="false" data-i18n="withCutlist">Mit Cutlist</button>
+                    <button class="chip sm" type="button" id="noErrChip" aria-pressed="false" data-i18n="noErrors">Ohne Fehlermeldung</button>
+                </div>
+            </div>
+
+            <div class="fsec">
+                <h3 data-i18n="mirrors">Mirrors</h3>
+                <div class="checklist" id="mirrorList" style="max-height:none;margin-top:0"></div>
+            </div>
+        </aside>
+        <div class="backdrop" id="backdrop"></div>
+
+        <main>
+            <div class="toolbar">
+                <button class="ghost filter-toggle" id="filterToggle" type="button">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="margin-right:6px"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+                    <span data-i18n="filters">Filter</span>&nbsp;<span id="activeCount2"></span>
+                </button>
+                <h2 id="resultsTitle" data-i18n="latest">Neueste Aufnahmen</h2>
+                <span class="count" id="resultsCount"></span>
+                <div class="sortbox">
+                    <label for="sortSel" class="sr-only" data-i18n="sortBy">Sortieren nach</label>
+                    <select id="sortSel">
+                        <option value="date" data-i18n="sDate">Datum</option>
+                        <option value="relevance" data-i18n="sRelevance">Relevanz</option>
+                        <option value="title" data-i18n="sTitle">Titel</option>
+                        <option value="channel" data-i18n="sChannel">Sender</option>
+                        <option value="duration" data-i18n="sDuration">Dauer</option>
+                    </select>
+                    <button class="icon-btn" id="dirBtn" type="button" title="">↓</button>
+                </div>
+            </div>
+            <div class="active-filters" id="activeFilters"></div>
+            <ul class="results" id="results" aria-live="polite">
+                <li class="skeleton"></li><li class="skeleton"></li><li class="skeleton"></li><li class="skeleton"></li>
+            </ul>
+            <div id="sentinel" style="height:1px"></div>
+            <button class="ghost more" id="moreBtn" type="button" hidden data-i18n="showMore">Mehr anzeigen</button>
+        </main>
     </div>
 
-    <button id="scrollToTopBtn" title="Go to top">↑</button>
+    <footer>
+        <span data-i18n-html="footer">Diese Seite speichert keine Dateien, sie verlinkt nur auf die Suchseiten der Mirrors. Die Dateiliste wird etwa alle 30 Minuten aktualisiert.</span>
+        · <a href="https://github.com/simonmb/otrkey_files" target="_blank" rel="noopener">GitHub</a>
+    </footer>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
-        crossorigin="anonymous"></script>
+    <div class="toast" id="toast" role="status"></div>
+    <button id="toTop" type="button" aria-label="Top">↑</button>
+
     <script src="script.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", () => {
-            const scrollToTopBtn = document.getElementById("scrollToTopBtn");
-
-            // Show button when scrolling down
-            window.addEventListener("scroll", () => {
-                if (document.body.scrollTop > 200 || document.documentElement.scrollTop > 200) {
-                    scrollToTopBtn.style.display = "block";
-                } else {
-                    scrollToTopBtn.style.display = "none";
-                }
-            });
-
-            // Scroll to top when clicked
-            scrollToTopBtn.addEventListener("click", () => {
-                window.scrollTo({
-                    top: 0,
-                    behavior: "smooth"
-                });
-            });
-        });
-    </script>
 </body>
 
 </html>
